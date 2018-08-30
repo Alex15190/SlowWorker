@@ -57,16 +57,25 @@
         dispatch_async(queue, ^{
         NSString *fetchedData = [self fetchSomethingFromServer];
         NSString *processedData = [self processData:fetchedData];
-        NSString *firtstResult = [self calculateFirstResult:processedData];
-        NSString *secondResult = [self calculateSecondResult:processedData];
-        NSString *resultSummary = [NSString stringWithFormat:@"First: [%@]\nSecond: [%@]", firtstResult, secondResult];
+        __block NSString *firstResult;
+        __block NSString *secondResult;
+        dispatch_group_t group =dispatch_group_create();
+        dispatch_group_async(group, queue, ^{
+            firstResult = [self calculateFirstResult:processedData];
+        });
+        dispatch_group_async(group, queue, ^{
+            secondResult = [self calculateSecondResult:processedData];
+        });
+        dispatch_group_notify(group, queue, ^{
+            NSString *resultSummary = [NSString stringWithFormat:@"First: [%@]\nSecond: [%@]", firstResult, secondResult];
             dispatch_async(dispatch_get_main_queue(), ^{
                 self.resultTextView.text = resultSummary;
                 self.startButton.enabled = YES;
                 [self.spinner stopAnimating];
             });
-        NSDate *endTime = [NSDate date];
-        NSLog(@"Completed in %f seconds", [endTime timeIntervalSinceDate:startTime]);
+            NSDate *endTime = [NSDate date];
+            NSLog(@"Completed in %f seconds", [endTime timeIntervalSinceDate:startTime]);
+        });
     });
 }
 
